@@ -11,7 +11,8 @@ import {
 
 const MONGO_URL = Deno.env.get("MONGO_URL");
 if (!MONGO_URL) {
-  throw new Error("Need a MONGO_URL")
+  console.error("Need a MONGO_URL");
+  Deno.exit(1);
 }
 
 const client = new MongoClient(MONGO_URL);
@@ -74,33 +75,32 @@ const handler = async (req: Request): Promise<Response> => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    
-  } else if (path === "/projects/by-user") {
-    const url = new URL(req.url);
-    const userIdString = url.searchParams.get("user_id");
+    } else if (path === "/projects/by-user") {
+      const url = new URL(req.url);
+      const userIdString = url.searchParams.get("user_id");
 
-    // Validar que el parámetro project_id se haya proporcionado
-    if ((!ObjectId.isValid(userIdString))) {
-      return new Response("El parámetro user_id es requerido", {
-        status: 400,
+      // Validar que el parámetro project_id se haya proporcionado
+      if ((!ObjectId.isValid(userIdString))) {
+        return new Response("El parámetro user_id es requerido", {
+          status: 400,
+        });
+      }
+
+      // Convertir projectIdString a ObjectId
+      const userId = new ObjectId(userIdString);
+
+      // Obtener los proyectos asociados al usuario
+      const proyectos = await fromModelToProyectosPorUsuario(
+        userId,
+        proyectosCollection,
+      );
+
+      // Responder con los proyectos encontrados
+      return new Response(JSON.stringify(proyectos), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       });
     }
-
-    // Convertir projectIdString a ObjectId
-    const userId = new ObjectId(userIdString);
-
-    // Obtener los proyectos asociados al usuario
-    const proyectos = await fromModelToProyectosPorUsuario(
-      userId,
-      proyectosCollection,
-    );
-
-    // Responder con los proyectos encontrados
-    return new Response(JSON.stringify(proyectos), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
   } else if (method === "POST") {
     if (path === "/users") {
       const user = await req.json();
